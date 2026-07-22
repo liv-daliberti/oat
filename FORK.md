@@ -62,15 +62,26 @@ The intended entry point is the **offline path**. `OfflineLearner.run` never tou
 - `masked_sum` with a constant normalizer weights every token equally while `masked_mean` weights every sequence equally, which is the length bias,
 - the choice of constant is a global rescale that folds into the learning rate.
 
-Run them with `pytest test/`.
+Run the hermetic parity suite with `pytest test/test_drgrpo_semantics.py`. Run
+`test/test_trajectory_dataset.py` separately when its Hugging Face model and dataset are
+available in a writable cache.
 
 ## Verified
 
-Python 3.12.13, torch 2.13.0+cpu, transformers 5.14.1, numpy 2.5.1, deepspeed 0.19.2.
+Current POSIT environment: Python 3.12.13, torch 2.11.0, transformers 5.14.1,
+numpy 2.3.5, and deepspeed 0.19.2.
 
-- All 33 modules import.
-- `test/` passes, 12 tests.
-- `oat.model.LLM` loads a causal LM and runs a forward pass.
-- `PPOLearner.get_batch_logps` produces finite per-token logprobs.
+- All 33 retained modules import.
+- The 11 hermetic tests in `test/test_drgrpo_semantics.py` pass. The inherited
+  `test_trajectory_dataset.py` is a Hugging Face dataset integration test and requires
+  network plus a writable cache (or a prepared offline cache); it is not a hermetic fork test.
+- Commit `c4858c9ed87cd0794a7218c37f8fdd3bc085ab24` installs under the distribution name
+  `oat-llm-posit` into a fresh Python 3.12 virtual environment.
+- Ionic A6000 job `30048441` loaded `oat.model.LLM`, initialized DeepSpeed ZeRO-1,
+  produced finite `PPOLearner.get_batch_logps`, computed the mean-centered Dr. GRPO
+  advantage and clipped surrogate, backpropagated, and changed 64/64 parameter tensors.
 
-Not yet verified: `deepspeed.initialize` on real GPUs and an end-to-end training step. Those need a GPU node.
+The GPU check is intentionally a smoke test. It assembles the surrogate directly and does
+not invoke `OfflinePPOLearner.run`, `prepare_data`, or the complete
+`PPOLearner.learning_step`. POSIT will run that learner-level end-to-end validation only
+after its Phase 4 trajectory-to-`TransitionData` adapter exists.
