@@ -75,8 +75,8 @@ numpy 2.3.5, and deepspeed 0.19.2.
 - The 11 hermetic tests in `test/test_drgrpo_semantics.py` pass. The inherited
   `test_trajectory_dataset.py` is a Hugging Face dataset integration test and requires
   network plus a writable cache (or a prepared offline cache); it is not a hermetic fork test.
-- Commit `c4858c9ed87cd0794a7218c37f8fdd3bc085ab24` installs under the distribution name
-  `oat-llm-posit` into a fresh Python 3.12 virtual environment.
+- The fork's immutable Git revision installs under the distribution name `oat-llm-posit`
+  into a fresh Python 3.12 virtual environment; POSIT owns the exact commit pin.
 - Ionic A6000 job `30048441` loaded `oat.model.LLM`, initialized DeepSpeed ZeRO-1,
   produced finite `PPOLearner.get_batch_logps`, computed the mean-centered Dr. GRPO
   advantage and clipped surrogate, backpropagated, and changed 64/64 parameter tensors.
