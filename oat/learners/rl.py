@@ -26,11 +26,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers.trainer import get_scheduler
 
-from oat.actors.base import ActorBase
 from oat.args import OATArgs
 from oat.learners.base import LearnerBase
 from oat.model import LLM, Critic
-from oat.types import RLAlgo, TransitionData
+from oat.types import ActorBase, RLAlgo, TransitionData
 from oat.utils.data import TransitionDataset
 from oat.utils.ops import disable_dropout
 

@@ -21,6 +21,20 @@ import torch
 Metric = Dict[str, Any]
 
 
+class ActorBase:
+    """Placeholder for the rollout-actor interface this fork removes.
+
+    Upstream OAT owns generation inside a vLLM-backed actor process, orchestrated by
+    Launchpad and fed to the learner over Plasma shared memory. That substrate pins the
+    project to Python <=3.10, vllm==0.11 and pyarrow<12, so this fork drops it and expects
+    the caller to collect experience itself and load it into the learner's buffer (the
+    offline path upstream already supports, see `OfflineLearner.run`).
+
+    The learner constructors still take an `actors` argument for signature compatibility;
+    it must be an empty list. This type survives only as their annotation.
+    """
+
+
 class DAPAlgo(Enum):
     DPO = 0
     IPO = 1

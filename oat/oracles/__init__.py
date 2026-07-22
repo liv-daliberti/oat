@@ -13,14 +13,11 @@
 # limitations under the License.
 
 from oat.oracles.gpt import GPTJudgeOracle
-from oat.oracles.remote.client import RemoteRMOracle
 
 
 def get_cls(model_name: str):
     if "gpt" in model_name.lower():
         return GPTJudgeOracle
-    if "remote" in model_name.lower():
-        return RemoteRMOracle
     # Return None if specified oracle is not implemented in oat;
     # in this case users need to define their own oracle.
     return None

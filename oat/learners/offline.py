@@ -15,7 +15,6 @@
 import random
 import time
 
-import launchpad as lp
 from tqdm import tqdm
 
 from oat.learners.base import LearnerBase
@@ -69,7 +68,3 @@ class OfflineLearner(LearnerBase):
 
         if self.strategy.is_rank_0():
             self._wandb.finish() if self._wandb else None
-            try:
-                lp.stop()
-            except AssertionError:
-                pass

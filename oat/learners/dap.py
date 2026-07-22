@@ -24,12 +24,11 @@ from torch import distributed as dist
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from oat.actors.base import ActorBase
 from oat.args import OATArgs
 from oat.learners.base import LearnerBase
 from oat.learners.loss import BNFLoss, DPOLoss, SimPOLoss
 from oat.model import LLM
-from oat.types import DAPAlgo, PreferenceData, SFTAlgo
+from oat.types import ActorBase, DAPAlgo, PreferenceData, SFTAlgo
 from oat.utils.data import PreferenceDataset, pad_to_length
 from oat.utils.ops import disable_dropout
 

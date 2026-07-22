@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Tuple, Union
 
 import deepspeed
-import launchpad as lp
 import numpy as np
 import pandas as pd
 import torch
@@ -33,11 +32,9 @@ from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 from transformers.trainer import get_scheduler
 
-from oat.actors.base import ActorBase
 from oat.args import OATArgs
-from oat.collectors import AsyncFeedbackCollector, FeedbackCollector
 from oat.model import LLM
-from oat.types import PreferenceData, TransitionData
+from oat.types import ActorBase, PreferenceData, TransitionData
 from oat.utils.data import get_datasets, get_tokenizer
 from oat.utils.deepspeed import get_strategy
 from oat.utils.distributed import (
@@ -45,7 +42,6 @@ from oat.utils.distributed import (
     node_ip_address_from_perspective,
     torch_type_codec,
 )
-from oat.utils.ipc import PlasmaShmClient, PlasmaShmServer
 from oat.utils.launcher import DistributedLauncher
 from oat.utils.ops import disable_dropout
 
@@ -63,7 +59,7 @@ class LearnerBase(abc.ABC, DistributedLauncher):
         is_master: bool,
         args: OATArgs,
         actors: List[ActorBase],
-        ipc_server: PlasmaShmServer,
+        ipc_server: Any = None,
     ) -> None:
         super().__init__(
             world_size, rank, local_rank, master_addr, master_port, is_master
@@ -168,18 +164,15 @@ class LearnerBase(abc.ABC, DistributedLauncher):
             f"num_policy_sgd_steps_per_episodes={num_policy_sgd_steps_per_episodes}; max_steps={max_steps_to_schedule}"
         )
 
-        # prepare collector, which communicates with actors
+        # NOTE(posit fork): upstream builds a FeedbackCollector here to pull experience from
+        # vLLM actors over Plasma shared memory. This fork has no actors, so only the offline
+        # path (caller fills `all_buffer`, see `OfflineLearner.run`) remains.
         if actors:
-            if self.args.asynchronous:
-                self.collector = AsyncFeedbackCollector(
-                    args, actors, PlasmaShmClient(self.ipc_server)
-                )
-            else:
-                self.collector = FeedbackCollector(
-                    args, actors, PlasmaShmClient(self.ipc_server)
-                )
-        else:
-            strategy.print("No actors or feedback collector in offline mode.")
+            raise ValueError(
+                "this fork removed OAT's actor/collector substrate; pass actors=[] and load "
+                "externally collected experience into the learner buffer instead"
+            )
+        strategy.print("No actors or feedback collector in offline mode.")
 
         # logger
         self._wandb = None
@@ -424,7 +417,6 @@ class LearnerBase(abc.ABC, DistributedLauncher):
 
         if self.strategy.is_rank_0():
             self._wandb.finish() if self._wandb else None
-            lp.stop()
 
     @abc.abstractmethod
     def process_feedback_data(

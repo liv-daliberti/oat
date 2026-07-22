@@ -31,11 +31,9 @@ import tree
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from oat.actors import RewardActor
-from oat.actors.base import ActorBase
 from oat.args import OATArgs
 from oat.learners import OfflineLearner, RLLearner
-from oat.types import TransitionData
+from oat.types import ActorBase, TransitionData
 from oat.utils.data import (
     TransitionDataset,
     get_datasets,
@@ -114,102 +112,10 @@ class PPOArgs(OATArgs):
     )
 
 
-class PPOActor(RewardActor):
-
-    def step(
-        self,
-        prompts: List[str],
-        formatted_prompts: List[str],
-        references: List[str] = None,
-    ) -> List[TransitionData]:
-        assert not self.eval_mode
-        info = {}
-        logging.info(f"actor start")
-
-        # step 1. generate
-        st = time.time()
-        outputs = self.generate(formatted_prompts, self.sampling_params)
-
-        candidates = []
-        prompt_token_ids = []
-        no_eos = []
-        response_ids = []
-        response_logprobs = []
-        resp_lens = []
-        for i in range(len(outputs)):
-            # for each prompt
-            prompt_token_ids.append(outputs[i].prompt_token_ids)
-            candidates.append([])
-            response_logprobs.append([])
-            response_ids.append([])
-            for k in range(self.sampling_params.n):
-                # for each response
-                candidates[i].append(outputs[i].outputs[k].text)
-                no_eos.append(outputs[i].outputs[k].finish_reason == "length")
-                token_ids = outputs[i].outputs[k].token_ids
-                logps = outputs[i].outputs[k].logprobs
-                logps = [item[token_ids[i]].logprob for i, item in enumerate(logps)]
-
-                response_logprobs[i].append(logps)
-                response_ids[i].append(token_ids)
-                resp_lens.append(len(token_ids))
-
-        info["actor/generate_time"] = time.time() - st
-
-        # step 2. verify
-        st = time.time()
-        rewards, _ = self.oracle.get_reward(
-            list(
-                itertools.chain.from_iterable(
-                    itertools.repeat(x, self.sampling_params.n) for x in prompts
-                )
-            ),
-            tree.flatten(candidates),
-            list(
-                itertools.chain.from_iterable(
-                    itertools.repeat(x, self.sampling_params.n) for x in references
-                )
-            ),
-        )
-        rewards = rewards.reshape(len(prompts), -1)
-        no_eos = np.array(no_eos).reshape(len(prompts), -1)
-
-        info["actor/verify_time"] = time.time() - st
-
-        logging.info(f"actor reward {rewards.mean()}")
-        info["actor/rewards"] = rewards.mean()
-        info["actor/no_eos_count"] = no_eos.sum()
-        info["actor/num_data"] = rewards.numel()
-        info["actor/response_tok_len"] = np.mean(resp_lens)
-        info["actor/sampling_max_tokens"] = self.sampling_params.max_tokens
-        info["actor/sampling_temperature"] = self.sampling_params.temperature
-
-        trajectory_data = []
-        for i in range(len(candidates)):
-            prompt = prompts[i]
-            candidates_per_prompt = candidates[i]
-            for j in range(len(candidates_per_prompt)):
-                reward = rewards[i][j].item()
-                if self.args.non_stop_fixed_reward is not None and no_eos[i][j]:
-                    reward = self.args.non_stop_fixed_reward
-                reward += self.args.non_stop_penalty if no_eos[i][j] else 0
-                dense_rewards = [0] * len(response_ids[i][j])
-                dense_rewards[-1] = reward
-                trajectory_data.append(
-                    TransitionData(
-                        prompt=prompt,
-                        prompt_ids=prompt_token_ids[i],
-                        response=candidates_per_prompt[j],
-                        response_ids=response_ids[i][j],
-                        response_logprobs=response_logprobs[i][j],
-                        rewards=dense_rewards,
-                        loss_mask=not no_eos[i][j] if self.args.ignore_no_eos else True,
-                        info=info,
-                    )
-                )
-        logging.info(f"actor finished data_len={len(trajectory_data)}")
-        handle = self.ipc_client.serialize_ipc(trajectory_data)
-        return handle
+# NOTE(posit fork): `PPOActor` lived here. It generated with an in-process vLLM engine and
+# shipped experience to the learner over Plasma shared memory. This fork collects rollouts
+# externally and loads them into the learner buffer, so the actor is gone along with the
+# vllm==0.11 / pyarrow<12 pins it required. See `oat.types.ActorBase`.
 
 
 class PPOLearner(RLLearner):

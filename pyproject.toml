@@ -3,11 +3,11 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "oat-llm"
+name = "oat-llm-posit"
 dynamic = ["version"]
-description = 'Online AlignmenT (OAT) for LLMs.'
+description = 'Online AlignmenT (OAT) for LLMs -- posit fork, distributed substrate removed, retargeted to a modern stack.'
 readme = "README.md"
-requires-python = "~=3.10"
+requires-python = ">=3.12"
 keywords = ["rlhf", "llm reasoning", "llm", "ai-alignment", "rl", "bandit", "ai", "sample-efficiency"]
 authors = [
   { name = "Zichen Liu", email = "liuzc@sea.com" },
@@ -17,48 +17,44 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+  # Core training stack. Versions are floors, not pins: the upstream exact pins
+  # (vllm==0.11.0, numpy==1.26.4, protobuf==3.20.0, pyarrow<12, dm-launchpad) existed to
+  # serve the Launchpad + pyarrow.plasma actor substrate this fork removes.
   "accelerate",
-  "bitsandbytes",
   "datasets",
-  "deepspeed==0.16.8",
-  "dm-launchpad[tensorflow]",
-  "einops",
-  "flash-attn==2.7.4.post1",
-  "fire",
-  "httpx",
-  "jsonlines",
-  "loralib",
-  "ml_collections",
-  "mosec",
-  "msgspec",
-  "optimum",
+  "deepspeed>=0.17",
+  "dm-tree",
+  "numpy>=2",
   "packaging",
-  "peft==0.15.2",
-  "protobuf==3.20.0",
-  "pyarrow>=0.6.1,<12",
-  "python-Levenshtein==0.25.1",
+  "pandas",
+  "peft>=0.15",
   "scipy",
-  "torchmetrics",
+  "torch",
   "tqdm",
+  "transformers>=5.6",
   "tyro",
-  "transformers",
-  "transformers_stream_generator",
-  "vllm==0.11.0",
+  # Optional 4-bit loading path in oat/model.py.
+  "bitsandbytes",
+  # Math verifier used by oat/utils/math_grader.py and the math oracle.
+  "math-verify[antlr4_13_2]",
+  "pylatexenc",
+  "regex",
+  "sympy",
+  # GPT judge oracle.
+  "openai",
+  # Logging.
   "rich",
   "wandb",
-  "wheel",
-  "numpy==1.26.4",
-  "math-verify[antlr4_13_2]",
-  "pylatexenc==2.10",
 ]
 
 [project.urls]
 Documentation = "https://github.com/sail-sg/oat#readme"
+Upstream = "https://github.com/sail-sg/oat"
 Issues = "https://github.com/sail-sg/oat/issues"
 Source = "https://github.com/sail-sg/oat"
 

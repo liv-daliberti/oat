@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from oat.learners.dap import DAPLearner
-from oat.learners.dap_with_rm import DAPwRMLearner
 from oat.learners.ntp import NTPLearner, OfflineNTPLearner
 from oat.learners.offline import OfflineLearner
 from oat.learners.offline_dap import OfflineDAPLearner
@@ -22,7 +21,6 @@ from oat.learners.sft import SFTLearner
 
 __all__ = [
     "DAPLearner",
-    "DAPwRMLearner",
     "OfflineDAPLearner",
     "RLLearner",
     "SFTLearner",
